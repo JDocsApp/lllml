@@ -1,4 +1,5 @@
 import re
+import json
 import logging as log
 from typing import Callable, List
 
@@ -68,6 +69,8 @@ class LLLML:
 
             log.info(f"Sending: '{arg}'")
 
+            if self.model_call == None:
+                raise ValueError("No model call function was supplied!")
             resp = self.model_call(arg)
             values[f"{response_count}"] = resp
             output += f">{arg}\n>>{resp}\n"
@@ -153,8 +156,13 @@ class LLLML:
 
         return output
 
-    def json(self):
-        return
+    def json(self) -> str:
+        d = dict()
+        d["name"] = self.name
+        d["script"] = self.script
+        d["file"] = self.file
+        d["module"] = self.module
+        return json.dumps(d)
 
 
 def main():
@@ -181,9 +189,9 @@ def main():
         "ANALYSIS_DETAILS": "sound design, themes, and cinematography",
     }
 
-    temp = LLLML(template=script, model_call=llm_call)
-    output = temp.compile(**values)
-    print(output)
+    # temp = LLLML(template=script, model_call=llm_call)
+    # output = temp.compile(**values)
+    # print(output)
 
 
 if __name__ == "__main__":
