@@ -6,11 +6,22 @@ from typing import Callable, List
 
 
 class LLLML:
-    __slots__ = ["script", "tests", "model_call"]
-
-    def __init__(self, template: str, model_call: Callable[[str], str]) -> None:
-        self.script = template
+    def __init__(
+        self, function: Callable, model_call: Callable[[str], str] | None = None
+    ) -> None:
+        """
+        A wrapper class for compiling LLLML scripts
+        """
+        self.script = function()
+        self.name = function.__name__
         self.model_call = model_call
+
+    def add_metadata(self, filename: str | None = None, module: str | None = None):
+        """
+        Used for adding additional metadata
+        """
+        self.file = filename
+        self.module = module
 
     def add_tests(self, tests: List[str]):
         self.tests = tests
@@ -141,6 +152,9 @@ class LLLML:
                 ptr += 1
 
         return output
+
+    def json(self):
+        return
 
 
 def main():
