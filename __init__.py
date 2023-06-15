@@ -1,7 +1,7 @@
 import re
 import json
 import logging as log
-from typing import Callable, List
+from typing import Callable, List, Dict
 
 # log.basicConfig(level=log.INFO)
 
@@ -156,13 +156,20 @@ class LLLML:
 
         return output
 
-    def json(self) -> str:
+    def to_json(self) -> str:
         d = dict()
         d["name"] = self.name
         d["script"] = self.script
         d["file"] = self.file
         d["module"] = self.module
+        d["model_call"] = self.model_call
         return json.dumps(d)
+
+    @staticmethod
+    def from_json(json: Dict) -> "LLLML":
+        l = LLLML(function, json.get("model_call"))
+        l.add_metadata(filename=json.get("file"), module=json.get("module"))
+        return l
 
 
 def main():
