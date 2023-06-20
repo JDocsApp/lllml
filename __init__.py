@@ -18,6 +18,20 @@ class LLLML:
     ### REGEX_END
 
     @staticmethod
+    def replace_values(script: str, json):
+        """
+        Simply replaces the values in script with their variable names
+        """
+        matches = re.findall(LLLML.PAT_VARIABLES, script)
+        for match in matches:
+            if match not in json:
+                raise ValueError(
+                    f"Variable '{match}' has no value in the 'values' dictionary."
+                )
+            script = re.sub("{{" + f"{match}" + "}}", json[match], script)
+        return script
+
+    @staticmethod
     def is_valid(script: str) -> bool:
         """
         Returns true if this is a valid LLLML script
@@ -62,18 +76,6 @@ class LLLML:
         output = ""
         response_count = 1
         values = kwargs
-
-        ### HELPER FUNCS
-        def _replace_values(string: str) -> str:
-            nonlocal values
-            matches = re.findall(LLLML.PAT_VARIABLES, string)
-            for match in matches:
-                if match not in values:
-                    raise ValueError(
-                        f"Variable '{match}' has no value in the 'values' dictionary."
-                    )
-                string = re.sub("{{" + f"{match}" + "}}", values[match], string)
-            return string
 
         def _llm_call(arg: str):
             # Yes I know this is kind of cringe but it 'just werks'
@@ -120,7 +122,7 @@ class LLLML:
 
             if match_prompt:
                 _ = _llm_call(
-                    _replace_values(match_prompt.group(1))
+                    LLLML.replace_values(match_prompt.group(1), json=values)
                 )  # do nothing with response for now
                 ptr += 1
             elif match_if:
@@ -130,7 +132,7 @@ class LLLML:
                     ptr += 1
                     res = re.match(LLLML.PAT_PROMPT, lines[ptr])
                     while res:
-                        _ = _llm_call(_replace_values(res.group(1)))
+                        _ = _llm_call(LLLML.replace_values(res.group(1), json=values))
                         ptr += 1
                         res = re.match(LLLML.PAT_PROMPT, lines[ptr])
                     while not res and ptr < len(lines):
@@ -145,7 +147,7 @@ class LLLML:
                     ptr += 1
                     res = re.match(LLLML.PAT_PROMPT, lines[ptr])
                     while res:
-                        _ = _llm_call(_replace_values(res.group(1)))
+                        _ = _llm_call(LLLML.replace_values(res.group(1), json=values))
                         ptr += 1
                         res = re.match(LLLML.PAT_PROMPT, lines[ptr])
                     while not res and ptr < len(lines):
@@ -158,7 +160,7 @@ class LLLML:
                     ptr += 1
                     res = re.match(LLLML.PAT_PROMPT, lines[ptr])
                     while res:
-                        _ = _llm_call(_replace_values(res.group(1)))
+                        _ = _llm_call(LLLML.replace_values(res.group(1), json=values))
                         ptr += 1
                         res = re.match(LLLML.PAT_PROMPT, lines[ptr])
                     while not res and ptr < len(lines):
