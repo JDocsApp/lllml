@@ -7,6 +7,17 @@ from typing import Callable, List, Dict
 
 
 class LLLML:
+    ### REGEXES FOR PARSING
+    PAT_COMMENTS = r"(?:#.*|^$)"
+    PAT_PROMPT = r"^>\s*(.+)$"
+    PAT_VARIABLES = r"(?<!\\){{([\w_]+)}}"
+    PAT_BANG = r"^!.*"
+    PAT_IF = f"^! if '(.*)' in {PAT_VARIABLES}"
+    PAT_ELIF = f"^! elif '(.*)' in {PAT_VARIABLES}"
+    PAT_ELSE = r"^! else"
+    PAT_ENDIF = r"^! endif"
+    ### REGEX_END
+
     def __init__(
         self, function: Callable, model_call: Callable[[str], str] | None = None
     ) -> None:
@@ -31,18 +42,8 @@ class LLLML:
         """
         Compiles this self.script, replacing variables and sends data to the model
         """
-        ### REGEXES FOR PARSING
-        PAT_COMMENTS = r"(?:#.*|^$)"
-        PAT_PROMPT = r"^>\s*(.+)$"
-        PAT_VARIABLES = r"(?<!\\){{([\w_]+)}}"
-        PAT_BANG = r"^!.*"
-        PAT_IF = f"^! if '(.*)' in {PAT_VARIABLES}"
-        PAT_ELIF = f"^! elif '(.*)' in {PAT_VARIABLES}"
-        PAT_ELSE = r"^! else"
-        PAT_ENDIF = r"^! endif"
-        ### REGEX_END
 
-        script = re.sub(PAT_COMMENTS, "", self.script)
+        script = re.sub(LLLML.PAT_COMMENTS, "", self.script)
         lines = script.strip().splitlines()
         output = ""
         response_count = 1
@@ -51,7 +52,7 @@ class LLLML:
         ### HELPER FUNCS
         def _replace_values(string: str) -> str:
             nonlocal values
-            matches = re.findall(PAT_VARIABLES, string)
+            matches = re.findall(LLLML.PAT_VARIABLES, string)
             for match in matches:
                 if match not in values:
                     raise ValueError(
@@ -98,10 +99,10 @@ class LLLML:
         condition = False
         while ptr < len(lines):
             line = lines[ptr]
-            match_prompt = re.match(PAT_PROMPT, line)
-            match_if = re.match(PAT_IF, line)
-            match_elif = re.match(PAT_ELIF, line)
-            match_else = re.match(PAT_ELSE, line)
+            match_prompt = re.match(LLLML.PAT_PROMPT, line)
+            match_if = re.match(LLLML.PAT_IF, line)
+            match_elif = re.match(LLLML.PAT_ELIF, line)
+            match_else = re.match(LLLML.PAT_ELSE, line)
 
             if match_prompt:
                 _ = _llm_call(
@@ -113,44 +114,44 @@ class LLLML:
                 if re.search(string, values[var]):
                     condition = True
                     ptr += 1
-                    res = re.match(PAT_PROMPT, lines[ptr])
+                    res = re.match(LLLML.PAT_PROMPT, lines[ptr])
                     while res:
                         _ = _llm_call(_replace_values(res.group(1)))
                         ptr += 1
-                        res = re.match(PAT_PROMPT, lines[ptr])
+                        res = re.match(LLLML.PAT_PROMPT, lines[ptr])
                     while not res and ptr < len(lines):
-                        res = re.match(PAT_ENDIF, lines[ptr])
+                        res = re.match(LLLML.PAT_ENDIF, lines[ptr])
                         ptr += 1
                 else:
-                    ptr = _filter(PAT_BANG, lines, ptr)
+                    ptr = _filter(LLLML.PAT_BANG, lines, ptr)
             elif match_elif:
                 string, var = match_elif.groups()
                 if not condition and re.search(string, values[var]):
                     condition = True
                     ptr += 1
-                    res = re.match(PAT_PROMPT, lines[ptr])
+                    res = re.match(LLLML.PAT_PROMPT, lines[ptr])
                     while res:
                         _ = _llm_call(_replace_values(res.group(1)))
                         ptr += 1
-                        res = re.match(PAT_PROMPT, lines[ptr])
+                        res = re.match(LLLML.PAT_PROMPT, lines[ptr])
                     while not res and ptr < len(lines):
-                        res = re.match(PAT_ENDIF, lines[ptr])
+                        res = re.match(LLLML.PAT_ENDIF, lines[ptr])
                         ptr += 1
                 else:
-                    ptr = _filter(PAT_BANG, lines, ptr)
+                    ptr = _filter(LLLML.PAT_BANG, lines, ptr)
             elif match_else:
                 if not condition:
                     ptr += 1
-                    res = re.match(PAT_PROMPT, lines[ptr])
+                    res = re.match(LLLML.PAT_PROMPT, lines[ptr])
                     while res:
                         _ = _llm_call(_replace_values(res.group(1)))
                         ptr += 1
-                        res = re.match(PAT_PROMPT, lines[ptr])
+                        res = re.match(LLLML.PAT_PROMPT, lines[ptr])
                     while not res and ptr < len(lines):
-                        res = re.match(PAT_ENDIF, lines[ptr])
+                        res = re.match(LLLML.PAT_ENDIF, lines[ptr])
                         ptr += 1
                 else:
-                    ptr = _filter(PAT_BANG, lines, ptr)
+                    ptr = _filter(LLLML.PAT_BANG, lines, ptr)
             else:
                 ptr += 1
 
