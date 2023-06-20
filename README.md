@@ -48,7 +48,7 @@ print(output)
 ## Probably should do
 
 * [ ] Implement a generic testing framework
-    * Not sure hwo I would go about doing this but it would be nice so that the end user can simply simply testing functions
+    * Not sure how I would go about doing this but it would be nice so that the end user can simply simply testing functions
 
 
 ## Optional
