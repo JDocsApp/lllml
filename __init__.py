@@ -167,7 +167,8 @@ class LLLML:
 
     @staticmethod
     def from_json(json: Dict) -> "LLLML":
-        l = LLLML(function, json.get("model_call"))
+        # I am litierally god
+        l = LLLML(lambda: f"{json.get('script')}", json.get("model_call"))
         l.add_metadata(filename=json.get("file"), module=json.get("module"))
         return l
 
