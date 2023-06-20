@@ -47,13 +47,15 @@ class LLLML:
         )
 
     def __init__(
-        self, function: Callable, model_call: Callable[[str], str] | None = None
+        self, function: Callable | str, model_call: Callable[[str], str] | None = None
     ) -> None:
         """
         A wrapper class for compiling LLLML scripts
         """
-        self.script = function()
-        self.name = function.__name__
+        if isinstance(function, Callable):
+            self.script = function()
+        else:
+            self.script = function
         self.model_call = model_call
 
     def add_metadata(self, filename: str | None = None, module: str | None = None):
@@ -175,7 +177,6 @@ class LLLML:
 
     def to_json(self) -> Dict:
         d = dict()
-        d["name"] = self.name
         d["script"] = self.script
         d["file"] = self.file
         d["module"] = self.module
