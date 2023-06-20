@@ -17,6 +17,21 @@ class LLLML:
     PAT_ENDIF = r"^! endif"
     ### REGEX_END
 
+    @staticmethod
+    def is_valid(script: str) -> bool:
+        """
+        Returns true if this is a valid LLLML script
+        """
+        script = re.sub(LLLML.PAT_COMMENTS, "", script)
+        return (
+            re.match(
+                f"({LLLML.PAT_IF}|{LLLML.PAT_ELIF}|{LLLML.PAT_ENDIF}|{LLLML.PAT_ELSE}|{LLLML.PAT_PROMPT})",
+                script,
+                re.MULTILINE,
+            )
+            is not None
+        )
+
     def __init__(
         self, function: Callable, model_call: Callable[[str], str] | None = None
     ) -> None:
