@@ -59,6 +59,12 @@ class FrameLLM:
         self.tests = tests
         self.model_call = model_call
 
+    def set_model_call(self, model_call: Callable[[str], str]):
+        """
+        Allows external classes to set hte model call
+        """
+        self.model_call = model_call
+
     def add_metadata(self, filename: str | None = None, module: str | None = None):
         """
         Used for adding additional metadata
