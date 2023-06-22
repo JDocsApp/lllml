@@ -5,7 +5,7 @@ from typing import Callable, List, Dict
 # log.basicConfig(level=log.INFO)
 
 
-class LLLML:
+class FrameLLM:
     ### REGEXES FOR PARSING
     PAT_COMMENTS = r"(?:#.*|^$)"
     PAT_PROMPT = r"^>\s*(.+)$"
@@ -22,7 +22,7 @@ class LLLML:
         """
         Simply replaces the values in script with their variable names
         """
-        matches = re.findall(LLLML.PAT_VARIABLES, script)
+        matches = re.findall(FrameLLM.PAT_VARIABLES, script)
         for match in matches:
             if match not in json:
                 raise ValueError(
@@ -34,12 +34,12 @@ class LLLML:
     @staticmethod
     def is_valid(script: str) -> bool:
         """
-        Returns true if this is a valid LLLML script
+        Returns true if this is a valid FrameLLM script
         """
-        script = re.sub(LLLML.PAT_COMMENTS, "", script)
+        script = re.sub(FrameLLM.PAT_COMMENTS, "", script)
         return (
             re.match(
-                f"({LLLML.PAT_IF}|{LLLML.PAT_ELIF}|{LLLML.PAT_ENDIF}|{LLLML.PAT_ELSE}|{LLLML.PAT_PROMPT})",
+                f"({FrameLLM.PAT_IF}|{FrameLLM.PAT_ELIF}|{FrameLLM.PAT_ENDIF}|{FrameLLM.PAT_ELSE}|{FrameLLM.PAT_PROMPT})",
                 script,
                 re.MULTILINE,
             )
@@ -47,15 +47,16 @@ class LLLML:
         )
 
     def __init__(
-        self, function: Callable | str, model_call: Callable[[str], str] | None = None
+        self,
+        script: str,
+        tests: List[str],
+        model_call: Callable[[str], str] | None = None,
     ) -> None:
         """
-        A wrapper class for compiling LLLML scripts
+        A wrapper class for compiling FrameLLM scripts
         """
-        if isinstance(function, Callable):
-            self.script = function()
-        else:
-            self.script = function
+        self.script = script
+        self.tests = tests
         self.model_call = model_call
 
     def add_metadata(self, filename: str | None = None, module: str | None = None):
@@ -65,15 +66,13 @@ class LLLML:
         self.file = filename
         self.module = module
 
-    def add_tests(self, tests: List[str]):
-        self.tests = tests
-
     def compile(self, **kwargs) -> str:
         """
         Compiles this self.script, replacing variables and sends data to the model
         """
-
-        script = re.sub(LLLML.PAT_COMMENTS, "", self.script)
+        if not FrameLLM.is_valid(self.script):
+            raise ValueError(f"This script is invalid!: {self.script}")
+        script = re.sub(FrameLLM.PAT_COMMENTS, "", self.script)
         lines = script.strip().splitlines()
         output = ""
         response_count = 1
@@ -117,14 +116,14 @@ class LLLML:
         condition = False
         while ptr < len(lines):
             line = lines[ptr]
-            match_prompt = re.match(LLLML.PAT_PROMPT, line)
-            match_if = re.match(LLLML.PAT_IF, line)
-            match_elif = re.match(LLLML.PAT_ELIF, line)
-            match_else = re.match(LLLML.PAT_ELSE, line)
+            match_prompt = re.match(FrameLLM.PAT_PROMPT, line)
+            match_if = re.match(FrameLLM.PAT_IF, line)
+            match_elif = re.match(FrameLLM.PAT_ELIF, line)
+            match_else = re.match(FrameLLM.PAT_ELSE, line)
 
             if match_prompt:
                 _ = _llm_call(
-                    LLLML.replace_values(match_prompt.group(1), json=values)
+                    FrameLLM.replace_values(match_prompt.group(1), json=values)
                 )  # do nothing with response for now
                 ptr += 1
             elif match_if:
@@ -132,44 +131,50 @@ class LLLML:
                 if re.search(string, values[var]):
                     condition = True
                     ptr += 1
-                    res = re.match(LLLML.PAT_PROMPT, lines[ptr])
+                    res = re.match(FrameLLM.PAT_PROMPT, lines[ptr])
                     while res:
-                        _ = _llm_call(LLLML.replace_values(res.group(1), json=values))
+                        _ = _llm_call(
+                            FrameLLM.replace_values(res.group(1), json=values)
+                        )
                         ptr += 1
-                        res = re.match(LLLML.PAT_PROMPT, lines[ptr])
+                        res = re.match(FrameLLM.PAT_PROMPT, lines[ptr])
                     while not res and ptr < len(lines):
-                        res = re.match(LLLML.PAT_ENDIF, lines[ptr])
+                        res = re.match(FrameLLM.PAT_ENDIF, lines[ptr])
                         ptr += 1
                 else:
-                    ptr = _filter(LLLML.PAT_BANG, lines, ptr)
+                    ptr = _filter(FrameLLM.PAT_BANG, lines, ptr)
             elif match_elif:
                 string, var = match_elif.groups()
                 if not condition and re.search(string, values[var]):
                     condition = True
                     ptr += 1
-                    res = re.match(LLLML.PAT_PROMPT, lines[ptr])
+                    res = re.match(FrameLLM.PAT_PROMPT, lines[ptr])
                     while res:
-                        _ = _llm_call(LLLML.replace_values(res.group(1), json=values))
+                        _ = _llm_call(
+                            FrameLLM.replace_values(res.group(1), json=values)
+                        )
                         ptr += 1
-                        res = re.match(LLLML.PAT_PROMPT, lines[ptr])
+                        res = re.match(FrameLLM.PAT_PROMPT, lines[ptr])
                     while not res and ptr < len(lines):
-                        res = re.match(LLLML.PAT_ENDIF, lines[ptr])
+                        res = re.match(FrameLLM.PAT_ENDIF, lines[ptr])
                         ptr += 1
                 else:
-                    ptr = _filter(LLLML.PAT_BANG, lines, ptr)
+                    ptr = _filter(FrameLLM.PAT_BANG, lines, ptr)
             elif match_else:
                 if not condition:
                     ptr += 1
-                    res = re.match(LLLML.PAT_PROMPT, lines[ptr])
+                    res = re.match(FrameLLM.PAT_PROMPT, lines[ptr])
                     while res:
-                        _ = _llm_call(LLLML.replace_values(res.group(1), json=values))
+                        _ = _llm_call(
+                            FrameLLM.replace_values(res.group(1), json=values)
+                        )
                         ptr += 1
-                        res = re.match(LLLML.PAT_PROMPT, lines[ptr])
+                        res = re.match(FrameLLM.PAT_PROMPT, lines[ptr])
                     while not res and ptr < len(lines):
-                        res = re.match(LLLML.PAT_ENDIF, lines[ptr])
+                        res = re.match(FrameLLM.PAT_ENDIF, lines[ptr])
                         ptr += 1
                 else:
-                    ptr = _filter(LLLML.PAT_BANG, lines, ptr)
+                    ptr = _filter(FrameLLM.PAT_BANG, lines, ptr)
             else:
                 ptr += 1
 
@@ -177,6 +182,7 @@ class LLLML:
 
     def to_json(self) -> Dict:
         d = dict()
+        d["name"] = self.name
         d["script"] = self.script
         d["file"] = self.file
         d["module"] = self.module
@@ -184,9 +190,9 @@ class LLLML:
         return d
 
     @staticmethod
-    def from_json(json: Dict) -> "LLLML":
+    def from_json(json: Dict) -> "FrameLLM":
         # I am litierally god
-        l = LLLML(lambda: f"{json.get('script')}", json.get("model_call"))
+        l = FrameLLM(lambda: f"{json.get('script')}", json.get("model_call"))
         l.add_metadata(filename=json.get("file"), module=json.get("module"))
         return l
 
@@ -218,7 +224,7 @@ def main():
         "ANALYSIS_DETAILS": "sound design, themes, and cinematography",
     }
 
-    # temp = LLLML(template=script, model_call=llm_call)
+    # temp = FrameLLM(template=script, model_call=llm_call)
     # output = temp.compile(**values)
     # print(output)
 
